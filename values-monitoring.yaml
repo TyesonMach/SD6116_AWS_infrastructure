@@ -1,22 +1,19 @@
-# --- Grafana ---
 grafana:
   adminUser: admin
-  adminPassword: admin123                # lab thôi, xong nhớ đổi!
+  adminPassword: admin123
   service:
-    type: LoadBalancer                   # mở public
+    type: LoadBalancer     
     port: 80
     targetPort: 3000
   persistence:
-    enabled: true                        # dùng EBS qua EBS CSI
+    enabled: true          
     storageClassName: gp3
     size: 5Gi
-  # bật vài dashboard cơ bản (chart đã có sẵn nhiều)
   defaultDashboardsEnabled: true
 
-# --- Prometheus ---
 prometheus:
   prometheusSpec:
-    retention: 7d                        # giữ dữ liệu 7 ngày cho đỡ tốn
+    retention: 7d
     resources:
       requests: { cpu: 100m, memory: 256Mi }
       limits:   { cpu: 500m, memory: 1Gi }
@@ -29,7 +26,6 @@ prometheus:
             requests:
               storage: 10Gi
 
-# --- Alertmanager (để mặc định, có thể tắt nếu muốn) ---
 alertmanager:
   enabled: true
   alertmanagerSpec:
@@ -37,4 +33,3 @@ alertmanager:
       requests: { cpu: 50m, memory: 128Mi }
       limits:   { cpu: 200m, memory: 512Mi }
 
-# --- Node exporter & kube-state-metrics: giữ mặc định ---

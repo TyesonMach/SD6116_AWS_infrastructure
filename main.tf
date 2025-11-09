@@ -1,6 +1,3 @@
-########################
-# VPC: chỉ public subnet (tiết kiệm, không NAT)
-########################
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -15,7 +12,6 @@ module "vpc" {
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  # Bật tự gán public IP cho public subnets (fix lỗi EKS node group)
   map_public_ip_on_launch = true
 
   public_subnet_tags = {
@@ -23,9 +19,6 @@ module "vpc" {
   }
 }
 
-########################
-# AMI Amazon Linux 2023
-########################
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -48,9 +41,6 @@ data "aws_ami" "al2023" {
 #   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 # }
 
-########################
-# KeyPair cho SSH
-########################
 resource "tls_private_key" "this" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -95,9 +85,6 @@ resource "aws_iam_instance_profile" "jenkins" {
   role = aws_iam_role.jenkins.name
 }
 
-########################
-# SG mở hết cho Jenkins
-########################
 resource "aws_security_group" "jenkins" {
   name        = "${var.project_name}-jenkins-sg"
   description = "Allow ALL (lab only)"
@@ -117,9 +104,6 @@ resource "aws_security_group" "jenkins" {
     }
 }
 
-########################
-# EC2 Jenkins: cài Docker, build image Jenkins + awscli + kubectl, run trên port 80
-########################
 resource "aws_instance" "jenkins" {
   ami                         = data.aws_ami.al2023.id
   instance_type               = var.jenkins_instance_type
@@ -129,7 +113,6 @@ resource "aws_instance" "jenkins" {
   key_name                    = aws_key_pair.this.key_name
   iam_instance_profile        = aws_iam_instance_profile.jenkins.name
 
-  # để EC2 được thay mới khi user_data/AMI đổi
   user_data_replace_on_change = true
 
   user_data = <<-EOF
@@ -140,7 +123,6 @@ resource "aws_instance" "jenkins" {
     systemctl enable --now docker
     usermod -aG docker ec2-user
 
-    # ---- Jenkins (Docker) ----
     docker volume create jenkins_home || true
     docker run -d --name jenkins \
       -p 8080:8080 -p 50000:50000 \
@@ -148,10 +130,8 @@ resource "aws_instance" "jenkins" {
       --restart always \
       jenkins/jenkins:lts-jdk17
 
-    # Đợi container sẵn sàng
     sleep 10
 
-    # ---- Cài AWS CLI + kubectl TRONG CONTAINER Jenkins ----
     docker exec -u root jenkins bash -lc '
       set -eux
       apt-get update
@@ -166,7 +146,6 @@ resource "aws_instance" "jenkins" {
       chmod +x /usr/local/bin/kubectl
     '
 
-    # ---- (Tuỳ chọn) Cài AWS CLI + kubectl TRÊN HOST EC2 ----
     curl -L "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
     unzip -q /tmp/awscliv2.zip -d /tmp
     /tmp/aws/install
@@ -175,7 +154,6 @@ resource "aws_instance" "jenkins" {
     curl -L -o /usr/local/bin/kubectl "https://dl.k8s.io/release/$KVER/bin/linux/amd64/kubectl"
     chmod +x /usr/local/bin/kubectl
 
-    # Lưu password Jenkins lần đầu cho tiện
     docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword \
       > /root/jenkins-initial-admin-password.txt || true
   EOF
@@ -183,19 +161,12 @@ resource "aws_instance" "jenkins" {
   tags = { Name = "${var.project_name}-jenkins" }
 }
 
-
-########################
-# ECR demo (tùy chọn để đẩy image)
-########################
 resource "aws_ecr_repository" "demo" {
   name                 = "${var.project_name}-app"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 }
 
-########################
-# EKS tối giản: public endpoint, 1 node t3.medium (SPOT để rẻ)
-########################
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.24.0"
@@ -206,14 +177,12 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.public_subnets
 
-  # Quan trọng: dùng public endpoint, tắt private
   cluster_endpoint_public_access       = true
   cluster_endpoint_private_access      = false
   cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
 
   enable_cluster_creator_admin_permissions = true
 
-  # (Khuyên) cấp quyền cho IAM local của bạn để khỏi bị 403 sau khi kết nối được:
   access_entries = {
     local_admin = {
       principal_arn = "arn:aws:iam::074905224053:user/tyeson"

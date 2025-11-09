@@ -10,10 +10,10 @@ variable "project_name" {
 
 variable "jenkins_instance_type" {
   type    = string
-  default = "t3.small" # theo yêu cầu
+  default = "t3.small"
 }
 
 variable "node_instance_type" {
   type    = string
-  default = "t3.medium" # theo yêu cầu
+  default = "t3.medium"
 }
