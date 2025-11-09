@@ -1,47 +1,19 @@
-# Global
-variable "region" { type = string }
-variable "project" { type = string }
-variable "cluster_name" { type = string }
-
-# You may put either IAM user ARNs or IAM role ARNs here.
-# We will automatically map ':role/' to map_roles and ':user/' to map_users.
-variable "admin_iam_arns" {
-  type    = list(string)
-  default = []
-}
-
-# VPC
-variable "vpc_cidr" { type = string }
-variable "azs" { type = list(string) }
-variable "public_subnets" { type = list(string) }
-variable "private_subnets" { type = list(string) }
-variable "tags" {
-  description = "Common tags for all resources"
-  type        = map(string)
-  default     = {}
-}
-
-# EKS node group
-variable "instance_types" { type = list(string) }
-variable "desired_size" { type = number }
-variable "min_size" { type = number }
-variable "max_size" { type = number }
-variable "capacity_type" {
+variable "region" {
   type    = string
-  default = "ON_DEMAND"
+  default = "ap-southeast-1"
 }
 
-# ECR repositories
-variable "ecr_repos" { type = list(string) }
-
-# variables.tf
-variable "key_name" {
+variable "project_name" {
   type    = string
-  default = null
+  default = "devops-lab"
 }
-variable "admin_cidr" {
+
+variable "jenkins_instance_type" {
   type    = string
-  default = "0.0.0.0/0"
+  default = "t3.small" # theo yêu cầu
 }
 
-
+variable "node_instance_type" {
+  type    = string
+  default = "t3.medium" # theo yêu cầu
+}
